@@ -14,31 +14,60 @@ export async function callOpenAI(prompt: string) {
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     messages: [
       { role: 'system', content:
-        'You are StudyFlow, an academic assistant. When asked for JSON, output ONLY valid JSON with the requested top-level keys. Do not include prose outside JSON.' },
+        'You are StudyFlow, an academic assistant. When asked for JSON, output ONLY valid JSON with the requested top-level keys. Do not include prose outside JSON. Ensure the JSON is complete and properly formatted.' },
       { role: 'user', content: prompt }
     ],
     // Use generic JSON object mode (widely available)
     response_format: { type: 'json_object' },
     temperature: 0.2,
+    max_tokens: 3000, // Increase token limit to prevent truncation
   }
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
-    body: JSON.stringify(body),
-  })
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`OpenAI error: ${res.status} ${text}`)
-  }
-
-  const data = await res.json()
-  const content = data?.choices?.[0]?.message?.content ?? '{}'
   try {
-    return JSON.parse(content)
-  } catch {
-    // If the model ever returns non-JSON, fall back
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify(body),
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      console.error(`OpenAI API error: ${res.status} ${text}`)
+      throw new Error(`OpenAI error: ${res.status} ${text}`)
+    }
+
+    const data = await res.json()
+    const content = data?.choices?.[0]?.message?.content ?? '{}'
+    
+    // Log the raw response for debugging
+    console.log('OpenAI raw response:', content?.slice(0, 200) + '...')
+    
+    // Check if response was truncated
+    if (data?.choices?.[0]?.finish_reason === 'length') {
+      console.warn('OpenAI response was truncated due to max_tokens limit')
+    }
+    
+    try {
+      // Clean the content before parsing
+      const cleanContent = content.trim()
+      
+      // Check if content looks like valid JSON
+      if (!cleanContent.startsWith('{') && !cleanContent.startsWith('[')) {
+        console.error('Response does not start with JSON:', cleanContent.slice(0, 100))
+        return { _fallback: true }
+      }
+      
+      const parsed = JSON.parse(cleanContent)
+      return parsed
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError)
+      console.error('Failed content:', content)
+      // If the model ever returns non-JSON, fall back
+      return { _fallback: true }
+    }
+    
+  } catch (error) {
+    console.error('OpenAI API call failed:', error)
     return { _fallback: true }
   }
 }
