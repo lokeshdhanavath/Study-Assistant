@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   let text = ''
   let title = 'Untitled'
   try {
-    const raw = await req.text() // works even if body is empty
+    const raw = await req.text()
     if (raw) {
       const parsed = JSON.parse(raw)
       text = String(parsed?.text ?? '').trim()
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     const prompt = `You are a study assistant. Work ONLY with the user's notes below.
 Produce detailed, well-structured output grounded strictly in the notes (no fabrications).
 
-Return JSON with exactly:
+CRITICAL: Return ONLY valid JSON with exactly this structure (no markdown, no extra text):
 {
  "summary": "≤350 words, Markdown allowed. Use short ### subheads. Include: (1) TL;DR (2–3 sentences), (2) Core ideas & why they matter, (3) Any step-by-step procedures present, (4) A mini cheat-sheet for definitions/tables (e.g., types/sizes/ranges) if present, (5) One tiny worked example or pseudocode if present, and (6) 3–5 common pitfalls/misconceptions. No new facts beyond the notes.",
  "flashcards": [{"question": "...", "answer": "..."} x 12..18],
@@ -55,7 +55,6 @@ Return JSON with exactly:
      "distractors":["(three plausible but wrong choices derived from the notes context)"],
      "explanation":"(ONE sentence explaining why the correct answer is right, grounded in the notes)"
    }
-   x 8..12
  ]
 }
 
@@ -63,30 +62,67 @@ Notes title: ${title}
 Notes:
 """${text.slice(0, 12000)}"""`
 
-    const json: any = await callOpenAI(prompt)
+    // Add better error handling for OpenAI response
+    let json: any
+    let rawResponse: string
+    
+    try {
+      rawResponse = await callOpenAI(prompt)
+      console.log('Raw OpenAI response:', rawResponse?.slice(0, 200) + '...')
+      
+      // Try to parse the response
+      if (typeof rawResponse === 'string') {
+        // Remove any markdown code blocks if present
+        const cleanResponse = rawResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim()
+        json = JSON.parse(cleanResponse)
+      } else if (typeof rawResponse === 'object') {
+        json = rawResponse
+      } else {
+        throw new Error('Unexpected response type from OpenAI')
+      }
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response:', parseError)
+      
+      
+      // Return fallback response
+      return NextResponse.json({
+        summary: `### TL;DR\nFailed to generate AI summary. Please try again.\n\n### Original Notes\n${text.slice(0, 300)}...`,
+        flashcards: [],
+        quiz: []
+      }, {
+        status: 200,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
 
     // ---- flashcards --------------------------------------------------------
     const flashcards: Card[] = Array.isArray(json?.flashcards)
       ? json.flashcards
           .filter((c: any) => c?.question && c?.answer)
           .slice(0, 18)
-          .map((c: any) => ({ question: String(c.question), answer: String(c.answer) }))
+          .map((c: any) => ({ 
+            question: String(c.question).slice(0, 200), 
+            answer: String(c.answer).slice(0, 500) 
+          }))
       : []
 
     // ---- quiz --------------------------------------------------------------
     let quiz: QuizQ[] = []
     if (Array.isArray(json?.quiz_seed)) {
       quiz = json.quiz_seed.slice(0, 8).map((q: any) => {
-        const choices = shuffle([
-          String(q.correct_answer),
-          ...((q.distractors || []).map((d: string) => String(d))).slice(0, 3),
-        ])
-        const correctIndex = Math.max(0, choices.findIndex((c) => c === String(q.correct_answer)))
+        const correctAnswer = String(q.correct_answer).slice(0, 200)
+        const distractors = (q.distractors || [])
+          .map((d: any) => String(d).slice(0, 200))
+          .slice(0, 3)
+        
+        const choices = shuffle([correctAnswer, ...distractors])
+        const correctIndex = Math.max(0, choices.findIndex((c) => c === correctAnswer))
+        
         return {
-          question: String(q.question),
+          question: String(q.question).slice(0, 300),
           choices,
           correctIndex,
-          explanation: String(q.explanation || ''),
+          explanation: String(q.explanation || '').slice(0, 200),
         }
       })
     }
@@ -95,14 +131,22 @@ Notes:
     if (!flashcards.length) {
       const lines = text.split(/\n+/).filter(Boolean).slice(0, 12)
       for (const ln of lines) {
-        if (ln.length >= 40) flashcards.push({ question: `Explain: ${ln.slice(0, 60)}…`, answer: ln })
+        if (ln.length >= 40) {
+          flashcards.push({ 
+            question: `Explain: ${ln.slice(0, 60)}…`, 
+            answer: ln.slice(0, 300) 
+          })
+        }
       }
     }
+    
     if (!quiz.length) {
       const sentences = text.split(/[.!?]\s+/).filter((s) => s.length > 25).slice(0, 8)
       quiz = sentences.map((s) => {
         const correct = s.slice(0, 80)
-        const distractors = shuffle(sentences.filter((x) => x !== s)).slice(0, 3).map((d) => d.slice(0, 80))
+        const distractors = shuffle(sentences.filter((x) => x !== s))
+          .slice(0, 3)
+          .map((d) => d.slice(0, 80))
         const choices = shuffle([correct, ...distractors])
         return {
           question: 'Which statement appears in your notes?',
@@ -113,13 +157,24 @@ Notes:
       })
     }
 
-    return NextResponse.json(
-      { summary: String(json?.summary || ''), flashcards, quiz },
-      { status: 200, headers: { 'Cache-Control': 'no-store' } },
-    )
+    const result = {
+      summary: String(json?.summary || 'No summary generated').slice(0, 1000),
+      flashcards: flashcards.slice(0, 18),
+      quiz: quiz.slice(0, 8)
+    }
+
+    return NextResponse.json(result, { 
+      status: 200, 
+      headers: { 'Cache-Control': 'no-store' } 
+    })
+    
   } catch (e) {
     console.error('summarize error', e)
-    return NextResponse.json(emptyPayload, {
+    return NextResponse.json({
+      summary: `### Error\nFailed to process your notes. Please try again with shorter text.\n\n### Original Notes Preview\n${text.slice(0, 300)}...`,
+      flashcards: [],
+      quiz: []
+    }, {
       status: 200,
       headers: { 'Cache-Control': 'no-store' },
     })
