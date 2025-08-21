@@ -63,7 +63,7 @@
 
 ---
 
-## 📸 Screens (add your own)
+## 📸 Screens
 
 Place screenshots in `public/screens/` and reference here:
 
