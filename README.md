@@ -76,7 +76,11 @@ Place screenshots in `public/screens/` and reference here:
 ---
 
 ## 📽️ Demo
+
+
 <video src='StudyMate Demo.mp4' width=180/>
+
+
 ---
 
 ## 🚀 Getting Started
