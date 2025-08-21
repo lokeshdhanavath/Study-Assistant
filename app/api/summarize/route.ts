@@ -33,8 +33,7 @@ Produce detailed, well-structured output grounded strictly in the notes (no fabr
 
 Return JSON with exactly:
 {
- "summary": "Structured summary of the notes covering the most important concepts and relationships; include definitions, formulas, and examples present in the notes. Do  not simple just name topics seen in the notes, explain them.",
- "outline": ["H2/H3 bullets that form a clean, hierarchical outline drawn from the notes"],
+ "summary": "≤350 words, Markdown allowed. Use short ### subheads. Include: (1) TL;DR (2–3 sentences), (2) Core ideas & why they matter, (3) Any step-by-step procedures present, (4) A mini cheat-sheet for definitions/tables (e.g., types/sizes/ranges) if present, (5) One tiny worked example or pseudocode if present, and (6) 3–5 common pitfalls/misconceptions. No new facts beyond the notes.",
  "flashcards": [{"question": "...", "answer": "..."} x 12..18],
  "quiz_seed": [
    {
@@ -105,7 +104,6 @@ Notes:
 
     return NextResponse.json({
       summary: String(json?.summary || ''),
-      outline: Array.isArray(json?.outline) ? json.outline.slice(0, 20).map(String) : [],
       flashcards,
       quiz
     }, { status: 200 })
