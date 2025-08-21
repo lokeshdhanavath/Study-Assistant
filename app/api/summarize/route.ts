@@ -1,4 +1,3 @@
-// app/api/summarize/route.ts
 import { NextResponse } from 'next/server'
 import { callOpenAI } from '@/lib/openai'
 
@@ -11,24 +10,38 @@ type QuizQ = { question: string; choices: string[]; correctIndex: number; explan
 
 function shuffle<T>(arr: T[]) {
   for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
-  return arr;
+  return arr
 }
 
 export async function POST(req: Request) {
+  // ---- read body safely (never throw on bad/empty JSON) -------------------
+  let text = ''
+  let title = 'Untitled'
   try {
-    const { text, title } = await req.json() as { text?: string; title?: string }
-    const src = (text || '').trim()
-    if (!src) {
-      return NextResponse.json({ summary: '', flashcards: [], quiz: [] }, { status: 200 })
+    const raw = await req.text() // works even if body is empty
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      text = String(parsed?.text ?? '').trim()
+      if (parsed?.title) title = String(parsed.title)
     }
+  } catch {
+    // ignore; fall back to empty text
+  }
 
-    // Ask OpenAI for *content-grounded* summary + facts.
-    // IMPORTANT: everything must be strictly grounded in the notes.
-    const prompt =
-`You are a study assistant. Work ONLY with the user's notes below.
+  const emptyPayload = { summary: '', flashcards: [], quiz: [] as QuizQ[] }
+  if (!text) {
+    return NextResponse.json(emptyPayload, {
+      status: 200,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+
+  try {
+    // ---- model prompt ------------------------------------------------------
+    const prompt = `You are a study assistant. Work ONLY with the user's notes below.
 Produce detailed, well-structured output grounded strictly in the notes (no fabrications).
 
 Return JSON with exactly:
@@ -46,13 +59,13 @@ Return JSON with exactly:
  ]
 }
 
-Notes title: ${title ?? 'Untitled'}
+Notes title: ${title}
 Notes:
-"""${src.slice(0, 12000)}"""`
+"""${text.slice(0, 12000)}"""`
 
     const json: any = await callOpenAI(prompt)
 
-    // Build flashcards (cap at 18)
+    // ---- flashcards --------------------------------------------------------
     const flashcards: Card[] = Array.isArray(json?.flashcards)
       ? json.flashcards
           .filter((c: any) => c?.question && c?.answer)
@@ -60,55 +73,55 @@ Notes:
           .map((c: any) => ({ question: String(c.question), answer: String(c.answer) }))
       : []
 
-    // Build quiz with randomized correct index (8 Qs max) + explanation
+    // ---- quiz --------------------------------------------------------------
     let quiz: QuizQ[] = []
     if (Array.isArray(json?.quiz_seed)) {
       quiz = json.quiz_seed.slice(0, 8).map((q: any) => {
         const choices = shuffle([
           String(q.correct_answer),
-          ...((q.distractors || []).map((d: string) => String(d))).slice(0, 3)
+          ...((q.distractors || []).map((d: string) => String(d))).slice(0, 3),
         ])
-        const correctIndex = choices.findIndex((c) => c === String(q.correct_answer))
+        const correctIndex = Math.max(0, choices.findIndex((c) => c === String(q.correct_answer)))
         return {
           question: String(q.question),
           choices,
-          correctIndex: Math.max(0, correctIndex),
-          explanation: String(q.explanation || '')
+          correctIndex,
+          explanation: String(q.explanation || ''),
         }
       })
     }
 
-    // Fallbacks if model returned nothing useful
+    // ---- fallbacks (always return JSON) -----------------------------------
     if (!flashcards.length) {
-      // naive keyword → Q/A
-      const lines = src.split(/\n+/).filter(Boolean).slice(0, 12)
+      const lines = text.split(/\n+/).filter(Boolean).slice(0, 12)
       for (const ln of lines) {
-        if (ln.length < 40) continue
-        flashcards.push({ question: `Explain: ${ln.slice(0, 60)}…`, answer: ln })
+        if (ln.length >= 40) flashcards.push({ question: `Explain: ${ln.slice(0, 60)}…`, answer: ln })
       }
     }
     if (!quiz.length) {
-      const sentences = src.split(/[.!?]\s+/).filter(s => s.length > 25).slice(0, 8)
+      const sentences = text.split(/[.!?]\s+/).filter((s) => s.length > 25).slice(0, 8)
       quiz = sentences.map((s) => {
         const correct = s.slice(0, 80)
-        const distractors = shuffle(sentences.filter(x=>x!==s)).slice(0,3).map(d=>d.slice(0,80))
+        const distractors = shuffle(sentences.filter((x) => x !== s)).slice(0, 3).map((d) => d.slice(0, 80))
         const choices = shuffle([correct, ...distractors])
         return {
-          question: `Which statement appears in your notes?`,
+          question: 'Which statement appears in your notes?',
           choices,
           correctIndex: choices.indexOf(correct),
-          explanation: 'This option appears directly in your notes.'
+          explanation: 'This option appears directly in your notes.',
         }
       })
     }
 
-    return NextResponse.json({
-      summary: String(json?.summary || ''),
-      flashcards,
-      quiz
-    }, { status: 200 })
-  } catch (e: any) {
+    return NextResponse.json(
+      { summary: String(json?.summary || ''), flashcards, quiz },
+      { status: 200, headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch (e) {
     console.error('summarize error', e)
-    return NextResponse.json({ summary:'', flashcards:[], quiz:[] }, { status: 200 })
+    return NextResponse.json(emptyPayload, {
+      status: 200,
+      headers: { 'Cache-Control': 'no-store' },
+    })
   }
 }
