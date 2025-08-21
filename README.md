@@ -63,7 +63,7 @@
 
 ---
 
-## 📸 Screens (add your own)
+## 📸 Screens
 
 Place screenshots in `public/screens/` and reference here:
 
@@ -72,6 +72,10 @@ Place screenshots in `public/screens/` and reference here:
 - Notes → Summary/Flashcards/Quiz
 - Focus Timer
 - Themes
+
+---
+
+## 📽️ Demo
 
 ---
 
