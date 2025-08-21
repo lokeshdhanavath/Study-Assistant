@@ -75,6 +75,10 @@ Place screenshots in `public/screens/` and reference here:
 
 ---
 
+## 📽️ Demo
+
+---
+
 ## 🚀 Getting Started
 
 ### 1) Requirements
