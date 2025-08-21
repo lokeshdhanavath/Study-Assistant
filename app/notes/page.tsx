@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast, Toaster } from 'sonner';
 import Loader from '@/components/Loader';
+import Markdown from '@/components/Markdown';
 
 type Card = { question:string; answer:string }
 type QuizQ = { question:string; choices:string[]; correctIndex:number; explanation?:string }
@@ -56,7 +57,9 @@ export default function NotesStudio(){
       {summary && (
         <div className="card p-5">
           <div className="text-xl font-semibold mb-2">Summary</div>
-          <div className="prose prose-invert max-w-none whitespace-pre-wrap">{summary}</div>
+          <div className="prose prose-invert max-w-none whitespace-pre-wrap">
+           <Markdown>{summary}</Markdown> 
+            </div>
           {!!outline?.length && (
             <ul className="mt-4 list-disc list-inside space-y-1 opacity-90">
               {outline.map((o,i)=><li key={i}>{o}</li>)}
