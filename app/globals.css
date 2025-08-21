@@ -316,3 +316,48 @@ html,body{height:100%;background:hsl(var(--bg));color:hsl(var(--fg))}
   font-weight:600; font-size:.9rem;
   color: hsl(var(--primary));
 }
+
+/* === Markdown (theme-aware) ============================================= */
+.md-content { line-height: 1.65; color: hsl(var(--fg)); }
+.md-content h1, .md-content h2, .md-content h3 {
+  margin: 0.9rem 0 0.4rem;
+  font-weight: 700;
+}
+.md-content h1 { font-size: 1.45rem; }
+.md-content h2 { font-size: 1.25rem; }
+.md-content h3 { font-size: 1.08rem; }
+
+.md-content p { margin: 0.5rem 0; }
+.md-content ul, .md-content ol { margin: 0.45rem 0 0.6rem 1.25rem; }
+.md-content ul { list-style: disc; }
+.md-content ol { list-style: decimal; }
+
+.md-content code {
+  background: color-mix(in srgb, hsl(var(--card)) 92%, transparent);
+  border: 1px solid hsl(var(--border));
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: .92em;
+}
+.md-content pre {
+  background: color-mix(in srgb, hsl(var(--card)) 96%, transparent);
+  border: 1px solid hsl(var(--border));
+  padding: .9rem 1rem;
+  border-radius: 10px;
+  overflow: auto;
+  margin: 0.7rem 0;
+}
+.md-content pre code { border: none; padding: 0; background: transparent; }
+.md-content blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: .9rem;
+  margin: .6rem 0;
+  opacity: .9;
+}
+.md-content hr {
+  border: none; height: 1px; background: hsl(var(--border));
+  margin: .9rem 0;
+}
+.md-content a { color: hsl(var(--primary)); text-decoration: none; }
+.md-content a:hover { text-decoration: underline; }
