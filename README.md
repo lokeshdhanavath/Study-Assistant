@@ -80,7 +80,7 @@ Place screenshots in `public/screens/` and reference here:
 
 https://github.com/user-attachments/assets/89b30b05-f454-46d2-ba8f-feb81b0989f5
 
-Watch StudyMate turn can raw notes into a clean summary, auto-generate flashcards & quizzes, create a study plan, find useful resources and keep focus with Pomodoro—wrapped in a beautiful, themeable UI.”
+Watch StudyMate turn can raw notes into a clean summary, auto-generate flashcards & quizzes, create a study plan, find useful resources and keep focus with Pomodoro—wrapped in a beautiful, themeable UI.
 
 
 ---
