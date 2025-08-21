@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const { text, title } = await req.json() as { text?: string; title?: string }
     const src = (text || '').trim()
     if (!src) {
-      return NextResponse.json({ summary: '', outline: [], flashcards: [], quiz: [] }, { status: 200 })
+      return NextResponse.json({ summary: '', flashcards: [], quiz: [] }, { status: 200 })
     }
 
     // Ask OpenAI for *content-grounded* summary + facts.
@@ -109,6 +109,6 @@ Notes:
     }, { status: 200 })
   } catch (e: any) {
     console.error('summarize error', e)
-    return NextResponse.json({ summary:'', outline:[], flashcards:[], quiz:[] }, { status: 200 })
+    return NextResponse.json({ summary:'', flashcards:[], quiz:[] }, { status: 200 })
   }
 }
