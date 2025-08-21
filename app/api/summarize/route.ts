@@ -33,7 +33,7 @@ Produce detailed, well-structured output grounded strictly in the notes (no fabr
 
 Return JSON with exactly:
 {
- "summary": "3–6 paragraph synthesis covering the most important concepts and relationships; include definitions, formulas, and examples present in the notes.",
+ "summary": "Structured summary of the notes covering the most important concepts and relationships; include definitions, formulas, and examples present in the notes. Do  not simple just name topics seen in the notes, explain them.",
  "outline": ["H2/H3 bullets that form a clean, hierarchical outline drawn from the notes"],
  "flashcards": [{"question": "...", "answer": "..."} x 12..18],
  "quiz_seed": [
