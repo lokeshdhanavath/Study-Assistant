@@ -44,7 +44,7 @@ export default function NotesStudio(){
   return (
     <div className="space-y-6">
       <Toaster />
-      <h1 className="text-3xl font-bold">PDF / Notes Studio</h1>
+      <h1 className="text-3xl font-bold">Notes Analyzer</h1>
 
       <form onSubmit={analyze} className="card p-5 grid gap-4">
         <textarea className="input min-h-[220px]" placeholder="Paste your notes or textbook text here…" value={text} onChange={e=>setText(e.target.value)} />
