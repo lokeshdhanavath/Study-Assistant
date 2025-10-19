@@ -12,6 +12,18 @@
   --primary:257 90% 64%;
   --primary-foreground:0 0% 100%;
   --muted:224 12% 18%;
+  
+  /* Login theme variables using HSL */
+  --login-bg: 224 20% 10%;
+  --login-card-bg: 224 18% 12%;
+  --login-text: 210 20% 98%;
+  --login-border: 224 12% 22%;
+  --login-input-bg: 224 18% 12%;
+  --login-input-text: 210 20% 98%;
+  --login-input-border: 224 12% 22%;
+  --login-button-bg: 257 90% 64%;
+  --login-button-text: 0 0% 100%;
+  --login-muted: 224 12% 18%;
 }
 
 /* 1) Cloud Gray (unchanged) */
@@ -23,6 +35,18 @@
   --primary:257 90% 64%;
   --primary-foreground:0 0% 100%;
   --muted:224 12% 18%;
+  
+  /* Login theme for ink-sky */
+  --login-bg: 224 20% 10%;
+  --login-card-bg: 224 18% 12%;
+  --login-text: 210 20% 98%;
+  --login-border: 224 12% 22%;
+  --login-input-bg: 224 18% 12%;
+  --login-input-text: 210 20% 98%;
+  --login-input-border: 224 12% 22%;
+  --login-button-bg: 257 90% 64%;
+  --login-button-text: 0 0% 100%;
+  --login-muted: 224 12% 18%;
 }
 
 /* 2) Lilac Noir — pink/lilac with slate */
@@ -34,6 +58,18 @@
   --primary:290 30% 60%;
   --primary-foreground:0 0% 100%;
   --muted:350 40% 93%;
+  
+  /* Login theme for lilac-noir */
+  --login-bg: 350 60% 96%;
+  --login-card-bg: 340 35% 88%;
+  --login-text: 230 35% 12%;
+  --login-border: 340 25% 78%;
+  --login-input-bg: 340 35% 88%;
+  --login-input-text: 230 35% 12%;
+  --login-input-border: 340 25% 78%;
+  --login-button-bg: 290 30% 60%;
+  --login-button-text: 0 0% 100%;
+  --login-muted: 350 40% 93%;
 }
 
 /* 3) Caribbean Teal — teal + soft mints */
@@ -45,6 +81,18 @@
   --primary:165 40% 40%;
   --primary-foreground:0 0% 100%;
   --muted:155 22% 92%;
+  
+  /* Login theme for caribbean-teal */
+  --login-bg: 160 20% 94%;
+  --login-card-bg: 150 30% 85%;
+  --login-text: 170 30% 12%;
+  --login-border: 150 18% 75%;
+  --login-input-bg: 150 30% 85%;
+  --login-input-text: 170 30% 12%;
+  --login-input-border: 150 18% 75%;
+  --login-button-bg: 165 40% 40%;
+  --login-button-text: 0 0% 100%;
+  --login-muted: 155 22% 92%;
 }
 
 /* 4) Saffron Slate — warm saffron + modern slate */
@@ -56,6 +104,18 @@
   --primary:45 90% 66%;
   --primary-foreground:0 0% 10%;
   --muted:95 24% 95%;
+  
+  /* Login theme for saffron-slate */
+  --login-bg: 90 20% 91%;
+  --login-card-bg: 150 16% 83%;
+  --login-text: 210 15% 12%;
+  --login-border: 160 12% 74%;
+  --login-input-bg: 150 16% 83%;
+  --login-input-text: 210 15% 12%;
+  --login-input-border: 160 12% 74%;
+  --login-button-bg: 45 90% 66%;
+  --login-button-text: 0 0% 10%;
+  --login-muted: 95 24% 95%;
 }
 
 /* 5) Periwinkle Sky — airy blues + periwinkle depth */
@@ -67,6 +127,18 @@
   --primary:236 45% 63%;
   --primary-foreground:0 0% 100%;
   --muted:205 65% 92%;
+  
+  /* Login theme for periwinkle */
+  --login-bg: 205 90% 94%;
+  --login-card-bg: 210 90% 82%;
+  --login-text: 228 30% 14%;
+  --login-border: 205 70% 73%;
+  --login-input-bg: 210 90% 82%;
+  --login-input-text: 228 30% 14%;
+  --login-input-border: 205 70% 73%;
+  --login-button-bg: 236 45% 63%;
+  --login-button-text: 0 0% 100%;
+  --login-muted: 205 65% 92%;
 }
 
 /* 6) Fern Mint — fresh greens */
@@ -78,13 +150,66 @@
   --primary:140 22% 41%;
   --primary-foreground:0 0% 100%;
   --muted:150 45% 94%;
+  
+  /* Login theme for fern-mint */
+  --login-bg: 150 60% 97%;
+  --login-card-bg: 120 55% 90%;
+  --login-text: 160 20% 14%;
+  --login-border: 145 45% 76%;
+  --login-input-bg: 120 55% 90%;
+  --login-input-text: 160 20% 14%;
+  --login-input-border: 145 45% 76%;
+  --login-button-bg: 140 22% 41%;
+  --login-button-text: 0 0% 100%;
+  --login-muted: 150 45% 94%;
 }
-
 
 /* ---------- Base (use the variables everywhere) ---------- */
 html,body{height:100%;background:hsl(var(--bg));color:hsl(var(--fg))}
 .card{@apply bg-card rounded-3xl border border-border shadow-soft}
 
+/* ---------- Login Theme Classes ---------- */
+.login-container {
+  background: hsl(var(--login-bg));
+  color: hsl(var(--login-text));
+}
+
+.login-card {
+  background: hsl(var(--login-card-bg));
+  border: 1px solid hsl(var(--login-border));
+  color: hsl(var(--login-text));
+}
+
+.login-input {
+  background: hsl(var(--login-input-bg));
+  color: hsl(var(--login-input-text));
+  border: 1px solid hsl(var(--login-input-border));
+}
+
+.login-input:focus {
+  border-color: hsl(var(--login-button-bg));
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--login-button-bg) / 0.2);
+}
+
+.login-button {
+  background: hsl(var(--login-button-bg));
+  color: hsl(var(--login-button-text));
+}
+
+.login-button:hover {
+  opacity: 0.9;
+}
+
+.login-muted {
+  color: hsl(var(--login-muted));
+}
+
+.login-border {
+  border-color: hsl(var(--login-border));
+}
+
+/* ---------- Rest of your existing styles ---------- */
 .btn{
   position:relative;padding:12px 20px;border-radius:12px;border:1px solid hsl(var(--border));
   font-weight:600;letter-spacing:.12em;background:transparent;color:hsl(var(--fg));
@@ -111,7 +236,6 @@ html,body{height:100%;background:hsl(var(--bg));color:hsl(var(--fg))}
 }
 .loader{
   position:absolute;top:0;left:0;width:100%;
-  /* avoid the “Unexpected '/'” error: */
   aspect-ratio: 1;
   border-radius:50%;background-color:transparent;
   animation:loader-rotate 2s linear infinite;z-index:0;
@@ -224,10 +348,8 @@ html,body{height:100%;background:hsl(var(--bg));color:hsl(var(--fg))}
 }
 .btn-ghost:hover{ transform: translateY(-1px); background: color-mix(in srgb, hsl(var(--card)) 100%, transparent); }
 
-
 /* expose text color utility for your other styles */
 :root { --text: hsl(var(--fg)); }
-
 
 /* ===== Home feature cards (theme-aware glass) ===== */
 .home-grid{
@@ -254,7 +376,7 @@ html,body{height:100%;background:hsl(var(--bg));color:hsl(var(--fg))}
   justify-content: stretch;
   user-select: none;
   color: hsl(var(--fg));
-  text-decoration: none; /* for <a>/<Link> */
+  text-decoration: none;
   position: relative;
   overflow: hidden;
 }

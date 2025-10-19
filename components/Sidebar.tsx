@@ -9,19 +9,23 @@ import {
   FileText,
   StickyNote,
   Timer as TimerIcon,
-  Palette
+  Palette,
+  Flame
 } from 'lucide-react';
 import Image from 'next/image';
 
 type Item = { href: string; label: string; icon: any };
 
 const NAV: Item[] = [
-  { href: '/',            label: 'Dashboard',  icon: LayoutGrid },
+  { href: '/',   label: 'Dashboard',  icon: LayoutGrid },
+  { href: '/dashboard',   label: 'Daily Progress',  icon: Flame },
   { href: '/study',       label: 'Study Plan', icon: BookOpen   },
   { href: '/resources',   label: 'Resources',  icon: Search     },
   { href: '/notes',       label: 'Notes',      icon: StickyNote },
   { href: '/timer',       label: 'Timer',      icon: TimerIcon  },
   { href: '/themes',      label: 'Themes',     icon: Palette    },
+
+
 ];
 
 export default function Sidebar() {

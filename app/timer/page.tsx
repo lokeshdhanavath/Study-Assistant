@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, BookOpen, Award, Clock } from 'lucide-react';
+import { streakService } from '@/lib/streakService'; // ✅ ADDED
 
 type Mode = 'focus' | 'short' | 'long';
 
@@ -55,6 +56,9 @@ export default function TimerPage() {
     if (mode === 'focus') {
       setSessions(s => s + 1);
       setMinutesFocused(m => m + Math.round(DUR.focus / 60));
+
+      // ✅ ADDED STREAK UPDATE - When focus session completes
+      streakService.recordActivity('timer', DUR.focus / 60); // 25 minutes
 
       // every 4th focus session -> long break
       const nextIsLong = ( (sessions + 1) % 4 ) === 0;

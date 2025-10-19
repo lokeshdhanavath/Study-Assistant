@@ -2,6 +2,8 @@
 import Loader from '@/components/Loader'
 import { useState } from 'react'
 import { toast, Toaster } from 'sonner'
+import { streakService } from '@/lib/streakService'
+import { searchEducationalVideos } from '@/lib/youtubeServices'
 
 type R = {
   title: string
@@ -28,31 +30,72 @@ export default function Resources() {
       return
     }
     setLoading(true)
+    setItems([])
+    
     try {
-      const res = await fetch('/api/resources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        body: JSON.stringify({ query: q.trim(), category }),
-      })
+      let resources: R[] = []
 
-      // Safely parse body (even on non-200)
-      const data = await res.json().catch(() => ({} as any))
-
-      if (!res.ok) {
-        throw new Error(data?.error || 'Search failed')
+      // Use YouTube API for video searches
+      if (category === 'videos' || category === 'all') {
+        console.log('🎬 Searching YouTube for videos...')
+        const youtubeResults = await searchEducationalVideos(q.trim())
+        console.log('📹 YouTube results:', youtubeResults.length)
+        
+        const youtubeResources: R[] = youtubeResults.map(yt => ({
+          title: yt.title,
+          description: yt.description,
+          url: yt.url,
+          source: 'YouTube',
+          type: 'video',
+          difficulty: 'Beginner',
+          is_free: true,
+          rating: 4.5,
+          tags: ['video', 'tutorial']
+        }))
+        
+        resources.push(...youtubeResources)
       }
 
-      const resources: R[] = Array.isArray(data?.resources) ? data.resources : []
+      // Use existing API for courses and articles (only if not videos-only)
+      if (category === 'courses' || category === 'articles' || (category === 'all' && resources.length < 5)) {
+        console.log('🔍 Searching other resources...')
+        try {
+          const res = await fetch('/api/resources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: q.trim(), category: category === 'all' ? 'all' : category }),
+          })
+
+          if (res.ok) {
+            const data = await res.json()
+            const apiResources = Array.isArray(data?.resources) ? data.resources : []
+            console.log('📚 API resources:', apiResources.length)
+            
+            // Filter out duplicates and add to resources
+            apiResources.forEach(apiResource => {
+              if (!resources.some(yt => yt.url === apiResource.url)) {
+                resources.push(apiResource)
+              }
+            })
+          }
+        } catch (apiError) {
+          console.log('API search failed, continuing with YouTube results')
+        }
+      }
+
+      console.log('🎯 Total resources found:', resources.length)
       setItems(resources)
 
+      // Update streak when resources found
       if (resources.length > 0) {
+        streakService.recordActivity('resources')
         toast.success(`Found ${resources.length} resources`)
       } else {
         toast.error('No resources found. Try a different query.')
       }
+      
     } catch (err: any) {
-      console.error('resources search error:', err)
+      console.error('Search error:', err)
       toast.error(err?.message || 'Failed to search resources')
     } finally {
       setLoading(false)
@@ -106,6 +149,7 @@ export default function Resources() {
                 {r.description && <p className="opacity-70 mt-1">{r.description}</p>}
                 <div className="flex flex-wrap gap-2 mt-3">
                   {r.source && <span className="badge">{r.source}</span>}
+                  {r.type && <span className="badge">{r.type}</span>}
                   {r.difficulty && <span className="badge">{r.difficulty}</span>}
                   {'is_free' in r && <span className="badge">{r.is_free ? 'Free' : 'Paid'}</span>}
                   {typeof r.rating === 'number' && <span className="badge">★ {r.rating.toFixed(1)}</span>}

@@ -3,20 +3,13 @@
 import Loader from '@/components/Loader';
 import { useEffect, useMemo, useState } from 'react'
 import { toast, Toaster } from 'sonner'
+import { saveStudyPlanToFirestore, loadStudyPlansFromFirestore, deleteStudyPlanFromFirestore } from '@/lib/studyPlanService';
+import { auth } from '@/lib/firebase';
 
 type Day = { day: string; tasks: string[] }
 type Week = { week: number; milestones: string[]; days: Day[] }
 type Plan = { subject: string; examDate: string; weeks: Week[]; tips: string[] }
 type SavedPlan = Plan & { id: string; createdAt: number }
-
-const STORAGE_KEY = 'studyflow_plans'
-
-function loadSaved(): SavedPlan[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] }
-}
-function saveAll(list: SavedPlan[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
-}
 
 export default function Study() {
   const [subject, setSubject] = useState('Calculus')
@@ -26,43 +19,147 @@ export default function Study() {
   const [saved, setSaved] = useState<SavedPlan[]>([])
 
   useEffect(() => {
-    setSaved(loadSaved())
+    loadSavedPlans()
   }, [])
+
+  const loadSavedPlans = async () => {
+    try {
+      const plans = await loadStudyPlansFromFirestore()
+      setSaved(plans)
+    } catch (error) {
+      console.error('Failed to load plans:', error)
+      toast.error('Failed to load saved plans')
+    }
+  }
 
   const generate = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, examDate: date }) })
+      const res = await fetch('/api/plan', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ subject, examDate: date }) 
+      })
       const data = await res.json()
       const weeks: Week[] = Array.isArray(data?.weeks) ? data.weeks : []
-      const safePlan: Plan = { subject: data?.subject || subject, examDate: data?.examDate || date, weeks, tips: Array.isArray(data?.tips) ? data.tips : [] }
+      const safePlan: Plan = { 
+        subject: data?.subject || subject, 
+        examDate: data?.examDate || date, 
+        weeks, 
+        tips: Array.isArray(data?.tips) ? data.tips : [] 
+      }
       setPlan(safePlan)
       setTimeout(() => toast.success('Plan generated'), 0)
     } catch (e: any) {
-      console.error(e); setPlan(null)
+      console.error(e); 
+      setPlan(null)
       setTimeout(() => toast.error(e?.message || 'Failed to generate plan'), 0)
-    } finally { setLoading(false) }
+    } finally { 
+      setLoading(false) 
+    }
   }
 
   const weeksCount = useMemo(() => (plan?.weeks?.length || 0), [plan])
 
-  const savePlan = () => {
+  const savePlan = async () => {
     if (!plan) return
-    const item: SavedPlan = { ...plan, id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`, createdAt: Date.now() }
-    const list = [item, ...saved].slice(0, 20)
-    setSaved(list); saveAll(list)
-    toast.success('Plan saved')
-  }
-  const loadPlan = (id: string) => {
-    const p = saved.find(s => s.id === id)
-    if (p) { setPlan(p); setSubject(p.subject); setDate(p.examDate); toast.info('Plan loaded') }
-  }
-  const deletePlan = (id: string) => {
-    const list = saved.filter(s => s.id !== id)
-    setSaved(list); saveAll(list)
-    toast.success('Deleted')
+    
+    try {
+      const planData = {
+        subject: plan.subject,
+        examDate: plan.examDate,
+        weeks: plan.weeks,
+        tips: plan.tips
+      }
+      
+      await saveStudyPlanToFirestore(planData)
+      await loadSavedPlans()
+      toast.success('Plan saved successfully!')
+    } catch (error) {
+      console.error('Failed to save plan:', error)
+      toast.error('Failed to save plan')
+    }
   }
 
+  const loadPlan = (id: string) => {
+    const p = saved.find(s => s.id === id)
+    if (p) { 
+      setPlan(p); 
+      setSubject(p.subject); 
+      setDate(p.examDate); 
+      toast.info('Plan loaded') 
+    }
+  }
+
+  // const deletePlan = async (id: string) => {
+  //   if (!confirm('Are you sure you want to delete this study plan?')) {
+  //     return
+  //   }
+
+  //   // Check if user is authenticated
+  //   if (!auth.currentUser) {
+  //     toast.error('Please sign in to delete study plans');
+  //     return;
+  //   }
+
+  //   try {
+  //     console.log('🗑️ Deleting plan:', id)
+  //     await deleteStudyPlanFromFirestore(id)
+      
+  //     // Update local state immediately for better UX
+  //     setSaved(prev => prev.filter(plan => plan.id !== id))
+      
+  //     // If the deleted plan is currently loaded, clear it
+  //     if (plan && saved.find(p => p.id === id)) {
+  //       setPlan(null)
+  //     }
+      
+  //     toast.success('Plan deleted successfully')
+      
+  //   } catch (error) {
+  //     console.error('Failed to delete plan:', error)
+      
+  //     if (error.message?.includes('not authenticated')) {
+  //       toast.error('Please sign in to delete study plans')
+  //     } else {
+  //       toast.error('Failed to delete plan')
+  //     }
+  //   }
+  // }
+const deletePlan = async (id: string) => {
+  if (!confirm('Are you sure you want to delete this study plan?')) {
+    return;
+  }
+
+  try {
+    console.log('🗑️ Deleting plan:', id)
+    await deleteStudyPlanFromFirestore(id)
+    
+    // Update local state immediately for better UX
+    setSaved(prev => prev.filter(plan => plan.id !== id))
+    
+    // If the deleted plan is currently loaded, clear it
+    if (plan && saved.find(p => p.id === id)) {
+      setPlan(null)
+    }
+    
+    toast.success('Plan deleted successfully')
+    
+  } catch (error: unknown) {
+    console.error('Failed to delete plan:', error)
+    
+    // Type-safe error handling
+    if (error instanceof Error) {
+      if (error.message.includes('Please sign in')) {
+        toast.error('Please sign in to delete study plans')
+      } else {
+        toast.error(error.message || 'Failed to delete plan')
+      }
+    } else {
+      toast.error('Failed to delete plan')
+    }
+  }
+}
   return (
     <div>
       <Toaster />
@@ -78,8 +175,12 @@ export default function Study() {
           <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="flex gap-2">
-          <button className="btn flex-1" onClick={generate} disabled={loading}>{loading ? 'Generating…' : 'Generate Plan'}</button>
-          <button className="btn flex-1" onClick={savePlan} disabled={!plan}>Save</button>
+          <button className="btn flex-1" onClick={generate} disabled={loading}>
+            {loading ? 'Generating…' : 'Generate Plan'}
+          </button>
+          <button className="btn flex-1" onClick={savePlan} disabled={!plan}>
+            Save
+          </button>
         </div>
       </div>
 
@@ -92,9 +193,18 @@ export default function Study() {
       {plan && (
         <div className="mt-8 space-y-6">
           <div className="grid md:grid-cols-3 gap-3">
-            <div className="card p-4"><div className="text-xs opacity-60">Subject</div><div className="text-xl font-semibold">{plan.subject}</div></div>
-            <div className="card p-4"><div className="text-xs opacity-60">Exam</div><div className="text-xl font-semibold">{plan.examDate}</div></div>
-            <div className="card p-4"><div className="text-xs opacity-60">Weeks</div><div className="text-xl font-semibold">{weeksCount}</div></div>
+            <div className="card p-4">
+              <div className="text-xs opacity-60">Subject</div>
+              <div className="text-xl font-semibold">{plan.subject}</div>
+            </div>
+            <div className="card p-4">
+              <div className="text-xs opacity-60">Exam</div>
+              <div className="text-xl font-semibold">{plan.examDate}</div>
+            </div>
+            <div className="card p-4">
+              <div className="text-xs opacity-60">Weeks</div>
+              <div className="text-xl font-semibold">{weeksCount}</div>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -138,7 +248,12 @@ export default function Study() {
               <div className="text-xs opacity-60">Saved: {new Date(sp.createdAt).toLocaleString()}</div>
               <div className="flex gap-2 mt-2">
                 <button className="btn flex-1" onClick={() => loadPlan(sp.id)}>Open</button>
-                <button className="btn flex-1" onClick={() => deletePlan(sp.id)}>Delete</button>
+                <button 
+                  className="btn flex-1 bg-red-600 hover:bg-red-700 text-white" 
+                  onClick={() => deletePlan(sp.id)}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}

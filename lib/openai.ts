@@ -1,28 +1,46 @@
-// lib/openai.ts
+
+
+// Fix: Explicitly declare the necessary structure of the global 'process' object.
+// This resolves the TypeScript error 'Cannot find name process'.
+declare const process: {
+  env: {
+    OPENAI_API_KEY?: string;
+    OPENAI_MODEL?: string;
+    OPENAI_BASE_URL?: string;
+    [key: string]: string | undefined; // Allows for other environment variables
+  }
+}
+
 export type Resource = {
   title: string; description: string; url: string; source?: string;
   type?: string; difficulty?: string; is_free?: boolean; rating?: number; tags?: string[];
 }
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+// Uses the OPENAI_BASE_URL from .env (which should be https://openrouter.ai/api/v1)
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'
 
 export async function callOpenAI(prompt: string) {
   // If no key, indicate fallback
   if (!OPENAI_API_KEY) return { _fallback: true } as any
 
   const body: any = {
+    // Uses the custom model name from .env (e.g., deepseek/deepseek-r1-0528:free)
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     messages: [
       { role: 'system', content:
         'You are StudyFlow, an academic assistant. When asked for JSON, output ONLY valid JSON with the requested top-level keys. Do not include prose outside JSON.' },
       { role: 'user', content: prompt }
     ],
-    // Use generic JSON object mode (widely available)
+    // Use generic JSON object mode
     response_format: { type: 'json_object' },
     temperature: 0.2,
   }
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  // Construct the API URL using the dynamic base URL
+  const apiUrl = `${OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`
+
+  const res = await fetch(apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
     body: JSON.stringify(body),
@@ -30,7 +48,7 @@ export async function callOpenAI(prompt: string) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`OpenAI error: ${res.status} ${text}`)
+    throw new Error(`AI API error (${apiUrl}): ${res.status} ${text}`)
   }
 
   const data = await res.json()
@@ -47,7 +65,7 @@ export async function aiResources(query: string, category: string) {
   const prompt = `Return JSON with keys { "resources": [...], "total_found": number, "search_summary": string }.
 Each "resources" item MUST include: title, description, url, source, type, difficulty, is_free, rating (3.5-5), tags[].
 Topic: "${query}". Category hint: "${category || 'any'}".
-Prioritize credible platforms (Khan Academy, MIT OCW, edX, Coursera, Real Python, W3Schools, university pages, reputable YouTube channels) Do not fabricate URLs only return URLs that actually work and have relevant content in them.`
+Prioritize credible platforms (Khan Academy, MIT OCW, edX, GeeksforGeeks, Coursera, Real Python, W3Schools, university pages, reputable YouTube channels) Do not fabricate URLs only return URLs that actually work and have relevant content in them.`
 
   const json: any = await callOpenAI(prompt)
   if (json?._fallback || !Array.isArray(json?.resources)) {
@@ -68,10 +86,10 @@ export async function aiPlan(subject: string, examISO: string) {
   const daysLeft = Math.max(1, Math.ceil((new Date(examISO).getTime() - Date.now()) / 86400000))
   const must = daysLeft <= 7
     ? `Return exactly ONE week with a "days" array of length ${daysLeft}.
-       Each "day" must use a weekday name starting from today (e.g., Monday) and list 2–3 concrete tasks.
-       Avoid generic phrases like "Read Chapter 1".`
+      Each "day" must use a weekday name starting from today (e.g., Monday) and list 2–3 concrete tasks.
+      Avoid generic phrases like "Read Chapter 1".`
     : `Return exactly ${Math.max(1, Math.ceil(daysLeft/7))} weeks.
-       Each week must contain 7 "days" objects with concrete tasks.`
+      Each week must contain 7 "days" objects with concrete tasks.`
 
   const prompt = `Output ONLY JSON with keys { "subject", "examDate", "weeks": [...], "tips": [...] }.
 - "weeks": [ { "week": number, "milestones": [string], "days": [ { "day": string, "tasks": [string] } ] } ]
